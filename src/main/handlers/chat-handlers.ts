@@ -22,6 +22,7 @@ import {
   setActiveChatWindow,
   setChatModelPreference,
   setThinkingMode,
+  setWindowCwd,
   startStreamingSession
 } from '../lib/claude-session';
 import { getApiKey, getWorkspaceDir } from '../lib/config';
@@ -35,6 +36,11 @@ export function registerChatHandlers(getMainWindow: () => BrowserWindow | null):
     console.log('[chat-handlers] chat:send-message received, payload:', JSON.stringify(payload));
     const sourceWindow = BrowserWindow.fromWebContents(event.sender);
     setActiveChatWindow(sourceWindow ?? getMainWindow());
+
+    // Store per-window cwd if provided
+    if (payload.cwd && sourceWindow) {
+      setWindowCwd(sourceWindow.id, payload.cwd);
+    }
     // Check for API key or OAuth token
     const apiKey = getApiKey();
     console.log('[chat-handlers] apiKey exists:', !!apiKey);

@@ -83,6 +83,8 @@ let isInterruptingResponse = false;
 const streamIndexToToolId: Map<number, string> = new Map();
 let pendingResumeSessionId: string | null = null;
 let activeChatWindow: BrowserWindow | null = null;
+// Per-window working directory tracking
+const windowCwdMap: Map<number, string> = new Map();
 
 function getModelIdForPreference(preference: ChatModelPreference = currentModelPreference): string {
   return MODEL_BY_PREFERENCE[preference] ?? FAST_MODEL_ID;
@@ -165,6 +167,14 @@ export function isSessionActive(): boolean {
 
 export function setActiveChatWindow(window: BrowserWindow | null): void {
   activeChatWindow = window && !window.isDestroyed() ? window : null;
+}
+
+export function setWindowCwd(windowId: number, cwd: string): void {
+  windowCwdMap.set(windowId, cwd);
+}
+
+export function getWindowCwd(windowId: number): string | undefined {
+  return windowCwdMap.get(windowId);
 }
 
 export async function interruptCurrentResponse(mainWindow: BrowserWindow | null): Promise<boolean> {
@@ -327,7 +337,8 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
           preset: 'claude_code',
           append: SYSTEM_PROMPT_APPEND
         },
-        cwd: getWorkspaceDir(),
+        // Use per-window cwd if set, otherwise fall back to global workspace
+        cwd: (activeChatWindow && getWindowCwd(activeChatWindow.id)) || getWorkspaceDir(),
         includePartialMessages: true,
         ...(isResumedSession && { resume: resumeSessionId! })
       }

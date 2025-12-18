@@ -23,6 +23,7 @@ export interface SerializedAttachmentPayload {
 export interface SendMessagePayload {
   text: string;
   attachments?: SerializedAttachmentPayload[];
+  cwd?: string;
 }
 
 export interface GetChatModelPreferenceResponse {

@@ -129,6 +129,8 @@ export default function Chat({ onOpenSettings, isVisible = true }: ChatProps) {
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [workspaceDir, setWorkspaceDir] = useState<string | null>(null);
+  // Per-tab project path (cwd) - set once when tab opens
+  const [projectCwd] = useState<string | null>(() => window.electron.project.getFromUrl());
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [modelPreference, setModelPreference] = useState<ChatModelPreference>('fast');
   const [isModelPreferenceUpdating, setIsModelPreferenceUpdating] = useState(false);
@@ -504,7 +506,8 @@ export default function Chat({ onOpenSettings, isVisible = true }: ChatProps) {
         console.log('[Chat.tsx] Calling window.electron.chat.sendMessage...');
         const response = await window.electron.chat.sendMessage({
           text: trimmedMessage,
-          attachments: serializedAttachments.length > 0 ? serializedAttachments : undefined
+          attachments: serializedAttachments.length > 0 ? serializedAttachments : undefined,
+          cwd: projectCwd ?? undefined
         });
         console.log('[Chat.tsx] sendMessage response:', response);
       } catch (error) {
@@ -581,7 +584,8 @@ export default function Chat({ onOpenSettings, isVisible = true }: ChatProps) {
 
       const response = await window.electron.chat.sendMessage({
         text: messageContent,
-        attachments: serializedAttachments.length > 0 ? serializedAttachments : undefined
+        attachments: serializedAttachments.length > 0 ? serializedAttachments : undefined,
+        cwd: projectCwd ?? undefined
       });
 
       if (!response.success && response.error) {
@@ -674,7 +678,7 @@ export default function Chat({ onOpenSettings, isVisible = true }: ChatProps) {
             isModelPreferenceUpdating={isModelPreferenceUpdating}
             mentions={mentions}
             onMentionsChange={setMentions}
-            workspaceDir={workspaceDir ?? undefined}
+            workspaceDir={projectCwd ?? workspaceDir ?? undefined}
             conversationId={currentConversationId}
             queuedMessages={queuedMessages}
             onQueueSendImmediate={handleSendQueuedMessageImmediately}
