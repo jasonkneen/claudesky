@@ -5,6 +5,7 @@ import { join } from 'path';
 import type { McpServerConfig, McpServersConfig } from '../../shared/types/ipc';
 import {
   getHiddenDiscoveredServers,
+  getMcpServerEnabled,
   getMcpServers,
   getWorkspaceDir,
   resolveCommandPath
@@ -40,6 +41,7 @@ function validateAndResolveServer(server: McpServerConfig): McpServerConfig | nu
 export async function getMergedMcpServers(): Promise<McpServersConfig> {
   const merged: McpServersConfig = {};
   const hidden = getHiddenDiscoveredServers();
+  const enabled = getMcpServerEnabled();
   console.log('Starting MCP server discovery');
 
   // Helper to process and merge a set of servers
@@ -51,6 +53,14 @@ export async function getMergedMcpServers(): Promise<McpServersConfig> {
       const nameWithSource = `${name} (${sourceName === 'Global Config' ? 'Claude Desktop' : sourceName})`;
       if (hidden.has(name) || hidden.has(nameWithSource)) {
         console.log(`Skipping hidden discovered server: ${name} (hidden as "${nameWithSource}")`);
+        continue;
+      }
+
+      // Skip disabled servers - check enabled state
+      // If enabled state is not explicitly set, default to true (enabled)
+      const isEnabled = enabled[name] !== false;
+      if (!isEnabled) {
+        console.log(`Skipping disabled server: ${name} (disabled in settings)`);
         continue;
       }
 

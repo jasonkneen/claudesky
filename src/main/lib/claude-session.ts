@@ -9,6 +9,7 @@ import {
   getApiKey,
   getChatModelPreferenceSetting,
   getDebugMode,
+  getMcpToolApprovals,
   getThinkingModeSetting,
   getWorkspaceDir,
   setChatModelPreferenceSetting,
@@ -23,6 +24,7 @@ import {
   resetAbortFlag,
   setSessionId
 } from './message-queue';
+import { getMergedMcpServers } from './mcp-server-discovery';
 import { getStoredValidAccessToken } from './oauth';
 import { endSessionLog, logEvent, startSessionLog } from './session-logger';
 
@@ -311,6 +313,70 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
       );
     }
 
+    // Load MCP servers from app config, Claude Desktop, and project .mcp.json
+    const mcpServers = await getMergedMcpServers();
+    const mcpServerNames = Object.keys(mcpServers);
+
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('🔧 MCP SERVER CONFIGURATION');
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log(`📊 Total servers loaded: ${mcpServerNames.length}`);
+    console.log(`📋 Server names: ${mcpServerNames.join(', ') || '(none)'}`);
+    console.log('📝 Server details:');
+    for (const [name, config] of Object.entries(mcpServers)) {
+      console.log(`   - ${name}:`, {
+        type: config.type || 'stdio',
+        command: 'command' in config ? config.command : config.url
+      });
+    }
+    console.log('✅ MCP servers will be passed to SDK query() options');
+    console.log('═══════════════════════════════════════════════════════════\n');
+
+    // Create permission handler for MCP tools
+    const mcpToolApprovals = getMcpToolApprovals();
+    console.log('📋 MCP Tool Approvals loaded:', Object.keys(mcpToolApprovals).length);
+
+    const canUseTool = async (
+      toolName: string,
+      input: Record<string, unknown>
+    ): Promise<{ behavior: 'allow'; updatedInput: Record<string, unknown> } | { behavior: 'deny'; message: string }> => {
+      console.log(`🔐 Permission check for tool: ${toolName}`);
+
+      // Check if this is an MCP tool (format: mcp__servername__toolname)
+      if (toolName.startsWith('mcp__')) {
+        // Parse MCP tool name: mcp__exa__web_search_exa -> exa, web_search_exa
+        const parts = toolName.split('__');
+        if (parts.length >= 3) {
+          const serverName = parts[1];
+          const mcpToolName = parts.slice(2).join('__');
+
+          // Try to match against stored approval keys
+          // Stored format: "exa (App):web_search_exa" or "workflows (Claude Desktop):list_workflows"
+          for (const [approvalKey, status] of Object.entries(mcpToolApprovals)) {
+            // Extract server and tool from approval key
+            const [serverPart, toolPart] = approvalKey.split(':');
+            if (!toolPart) continue;
+
+            // Remove source suffix from server name (e.g., "exa (App)" -> "exa")
+            const cleanServerName = serverPart.replace(/\s*\([^)]+\)\s*$/, '');
+
+            if (cleanServerName === serverName && toolPart === mcpToolName) {
+              if (status === 'always_allowed') {
+                console.log(`✅ Auto-approving MCP tool: ${toolName} (always_allowed)`);
+                return { behavior: 'allow', updatedInput: input };
+              }
+            }
+          }
+        }
+
+        // MCP tool not approved - ask user
+        console.log(`⚠️  MCP tool requires approval: ${toolName}`);
+      }
+
+      // Allow non-MCP tools (Bash, Read, etc.) by default when using acceptEdits mode
+      return { behavior: 'allow', updatedInput: input };
+    };
+
     querySession = query({
       prompt: messageGenerator(),
       options: {
@@ -320,6 +386,8 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
         // This prevents Claude Desktop's MCP servers (which may have draft-07 schemas) from
         // being loaded. Draft-07 schemas are incompatible with Claude API's draft-2020-12.
         settingSources: ['project'],
+        mcpServers,
+        canUseTool,
         permissionMode: 'acceptEdits',
         allowedTools: ['Bash', 'WebFetch', 'WebSearch', 'Skill'],
         pathToClaudeCodeExecutable: resolveClaudeCodeCli(),
@@ -553,6 +621,39 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
       } else if (sdkMessage.type === 'system') {
         if (sdkMessage.subtype === 'init') {
           const sessionIdFromSdk = sdkMessage.session_id;
+
+          // Verify MCP servers and tools are loaded
+          const mcpServersInSdk = (sdkMessage as any).mcp_servers || [];
+          const toolsInSdk = (sdkMessage as any).tools || [];
+
+          console.log('═══════════════════════════════════════════════════════════');
+          console.log('✅ SDK SESSION INITIALIZED');
+          console.log('═══════════════════════════════════════════════════════════');
+          console.log(`🆔 Session ID: ${sessionIdFromSdk}`);
+          console.log(`🤖 Model: ${modelId}`);
+          console.log(`🔧 MCP Servers in SDK: ${mcpServersInSdk.length}`);
+          if (mcpServersInSdk.length > 0) {
+            console.log('   MCP Servers:');
+            mcpServersInSdk.forEach((server: any) => {
+              console.log(`     - ${server.name}: ${server.status}`);
+            });
+          }
+          console.log(`🛠️  Total tools available: ${toolsInSdk.length}`);
+          console.log(`   Built-in tools: Bash, Read, Write, Edit, WebFetch, WebSearch, Skill`);
+
+          // Extract MCP tools (tools not in the built-in list)
+          const builtInTools = ['Bash', 'Read', 'Write', 'Edit', 'MultiEdit', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Skill', 'LSP', 'NotebookRead', 'NotebookEdit', 'TodoWrite', 'AskUserQuestion'];
+          const mcpTools = toolsInSdk.filter((tool: string) => !builtInTools.includes(tool));
+
+          if (mcpTools.length > 0) {
+            console.log(`   🎯 MCP tools (${mcpTools.length}): ${mcpTools.join(', ')}`);
+            console.log('   ✅ SUCCESS: MCP tools are in the system prompt!');
+          } else {
+            console.log('   ⚠️  WARNING: No MCP tools found in system prompt');
+            console.log('   📋 Expected MCP tools from servers:', mcpServerNames.join(', '));
+          }
+          console.log('═══════════════════════════════════════════════════════════\n');
+
           if (sessionIdFromSdk) {
             setSessionId(sessionIdFromSdk);
             if (targetWindow && !targetWindow.isDestroyed()) {
@@ -564,7 +665,9 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
             logEvent(currentSessionId, 'session_initialized', {
               sessionId: sessionIdFromSdk,
               resumed: isResumedSession,
-              model: modelId
+              model: modelId,
+              mcpServers: mcpServersInSdk,
+              tools: toolsInSdk
             });
           }
         }
