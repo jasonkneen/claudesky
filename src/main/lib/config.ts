@@ -200,7 +200,9 @@ export function setChatModelPreferenceSetting(preference: ChatModelPreference): 
 
 export function getThinkingModeSetting(): ThinkingMode {
   const config = loadConfig();
-  return (config.thinkingMode ?? 'off') as ThinkingMode;
+  const mode = (config.thinkingMode ?? 'off') as ThinkingMode;
+  console.log(`[Config] getThinkingModeSetting() returning: ${mode} (from config: ${config.thinkingMode})`);
+  return mode;
 }
 
 export function setThinkingModeSetting(mode: ThinkingMode): void {

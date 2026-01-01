@@ -305,6 +305,28 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
     const thinkingBudget = getThinkingTokenBudget();
     const modelSupportsThinking = supportsThinking(modelId);
 
+    const thinkingDebugMsg = [
+      '═══════════════════════════════════════════════════════════',
+      '🧠 THINKING MODE CONFIGURATION',
+      '═══════════════════════════════════════════════════════════',
+      `💭 Thinking mode: ${currentThinkingMode}`,
+      `🎯 Thinking token budget: ${thinkingBudget}`,
+      `🤖 Model: ${modelId}`,
+      `✅ Model supports thinking: ${modelSupportsThinking}`,
+      `📤 Will pass maxThinkingTokens to SDK: ${thinkingBudget > 0 && modelSupportsThinking ? thinkingBudget : 'NO (thinking disabled or unsupported)'}`,
+      '═══════════════════════════════════════════════════════════\n'
+    ].join('\n');
+
+    console.log(thinkingDebugMsg);
+
+    // Also send to browser console
+    const targetWindow = resolveTargetWindow(mainWindow);
+    if (targetWindow) {
+      targetWindow.webContents.executeJavaScript(
+        `console.log(${JSON.stringify(thinkingDebugMsg)})`
+      );
+    }
+
     // Warn if thinking mode is on but model doesn't support it
     if (thinkingBudget > 0 && !modelSupportsThinking) {
       console.warn(
@@ -437,6 +459,7 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
             });
           } else if (streamEvent.delta.type === 'thinking_delta') {
             // Thinking text delta - send as thinking chunk
+            console.log(`🧠 Thinking delta received (index: ${streamEvent.index}):`, streamEvent.delta.thinking?.substring(0, 50) + '...');
             targetWindow.webContents.send('chat:thinking-chunk', {
               index: streamEvent.index,
               delta: streamEvent.delta.thinking
@@ -463,6 +486,7 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
         } else if (streamEvent.type === 'content_block_start') {
           // Handle thinking blocks
           if (streamEvent.content_block.type === 'thinking') {
+            console.log(`🧠 Thinking block started (index: ${streamEvent.index})`);
             targetWindow.webContents.send('chat:thinking-start', {
               index: streamEvent.index
             });
