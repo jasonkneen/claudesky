@@ -41,42 +41,43 @@ contextBridge.exposeInMainWorld('electron', {
       taskDescription: string;
       customInstructions?: string;
     }) => ipcRenderer.invoke('chat:handoff-to-agent', payload),
-    onMessageChunk: (callback: (chunk: string) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, chunk: string) => callback(chunk);
+    onMessageChunk: (callback: (chunk: string, paneId?: string) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, chunk: string, paneId?: string) => callback(chunk, paneId);
       ipcRenderer.on('chat:message-chunk', listener);
       return () => ipcRenderer.removeListener('chat:message-chunk', listener);
     },
-    onThinkingStart: (callback: (data: { index: number }) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, data: { index: number }) =>
-        callback(data);
+    onThinkingStart: (callback: (data: { index: number }, paneId?: string) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: { index: number }, paneId?: string) =>
+        callback(data, paneId);
       ipcRenderer.on('chat:thinking-start', listener);
       return () => ipcRenderer.removeListener('chat:thinking-start', listener);
     },
-    onThinkingChunk: (callback: (data: { index: number; delta: string }) => void) => {
+    onThinkingChunk: (callback: (data: { index: number; delta: string }, paneId?: string) => void) => {
       const listener = (
         _event: Electron.IpcRendererEvent,
-        data: { index: number; delta: string }
-      ) => callback(data);
+        data: { index: number; delta: string },
+        paneId?: string
+      ) => callback(data, paneId);
       ipcRenderer.on('chat:thinking-chunk', listener);
       return () => ipcRenderer.removeListener('chat:thinking-chunk', listener);
     },
-    onMessageComplete: (callback: () => void) => {
-      const listener = () => callback();
+    onMessageComplete: (callback: (paneId?: string) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, paneId?: string) => callback(paneId);
       ipcRenderer.on('chat:message-complete', listener);
       return () => ipcRenderer.removeListener('chat:message-complete', listener);
     },
-    onMessageStopped: (callback: () => void) => {
-      const listener = () => callback();
+    onMessageStopped: (callback: (paneId?: string) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, paneId?: string) => callback(paneId);
       ipcRenderer.on('chat:message-stopped', listener);
       return () => ipcRenderer.removeListener('chat:message-stopped', listener);
     },
-    onMessageError: (callback: (error: string) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, error: string) => callback(error);
+    onMessageError: (callback: (error: string, paneId?: string) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, error: string, paneId?: string) => callback(error, paneId);
       ipcRenderer.on('chat:message-error', listener);
       return () => ipcRenderer.removeListener('chat:message-error', listener);
     },
-    onDebugMessage: (callback: (message: string) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, message: string) => callback(message);
+    onDebugMessage: (callback: (message: string, paneId?: string) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, message: string, paneId?: string) => callback(message, paneId);
       ipcRenderer.on('chat:debug-message', listener);
       return () => ipcRenderer.removeListener('chat:debug-message', listener);
     },
@@ -86,36 +87,40 @@ contextBridge.exposeInMainWorld('electron', {
         name: string;
         input: Record<string, unknown>;
         streamIndex: number;
-      }) => void
+      }, paneId?: string) => void
     ) => {
       const listener = (
         _event: Electron.IpcRendererEvent,
-        tool: { id: string; name: string; input: Record<string, unknown>; streamIndex: number }
-      ) => callback(tool);
+        tool: { id: string; name: string; input: Record<string, unknown>; streamIndex: number },
+        paneId?: string
+      ) => callback(tool, paneId);
       ipcRenderer.on('chat:tool-use-start', listener);
       return () => ipcRenderer.removeListener('chat:tool-use-start', listener);
     },
-    onToolInputDelta: (callback: (data: { index: number; delta: string }) => void) => {
+    onToolInputDelta: (callback: (data: { index: number; toolId: string; delta: string }, paneId?: string) => void) => {
       const listener = (
         _event: Electron.IpcRendererEvent,
-        data: { index: number; delta: string }
-      ) => callback(data);
+        data: { index: number; toolId: string; delta: string },
+        paneId?: string
+      ) => callback(data, paneId);
       ipcRenderer.on('chat:tool-input-delta', listener);
       return () => ipcRenderer.removeListener('chat:tool-input-delta', listener);
     },
-    onContentBlockStop: (callback: (data: { index: number }) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, data: { index: number }) =>
-        callback(data);
+    onContentBlockStop: (callback: (data: { index: number; toolId?: string }, paneId?: string) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        data: { index: number; toolId?: string },
+        paneId?: string
+      ) => callback(data, paneId);
       ipcRenderer.on('chat:content-block-stop', listener);
       return () => ipcRenderer.removeListener('chat:content-block-stop', listener);
     },
-    onToolResultStart: (
-      callback: (data: { toolUseId: string; content: string; isError: boolean }) => void
-    ) => {
+    onToolResultStart: (callback: (data: { toolUseId: string; content: string; isError: boolean }, paneId?: string) => void) => {
       const listener = (
         _event: Electron.IpcRendererEvent,
-        data: { toolUseId: string; content: string; isError: boolean }
-      ) => callback(data);
+        data: { toolUseId: string; content: string; isError: boolean },
+        paneId?: string
+      ) => callback(data, paneId);
       ipcRenderer.on('chat:tool-result-start', listener);
       return () => ipcRenderer.removeListener('chat:tool-result-start', listener);
     },
@@ -127,13 +132,12 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.on('chat:tool-result-delta', listener);
       return () => ipcRenderer.removeListener('chat:tool-result-delta', listener);
     },
-    onToolResultComplete: (
-      callback: (data: { toolUseId: string; content: string; isError?: boolean }) => void
-    ) => {
+    onToolResultComplete: (callback: (data: { toolUseId: string; content: string; isError?: boolean }, paneId?: string) => void) => {
       const listener = (
         _event: Electron.IpcRendererEvent,
-        data: { toolUseId: string; content: string; isError?: boolean }
-      ) => callback(data);
+        data: { toolUseId: string; content: string; isError?: boolean },
+        paneId?: string
+      ) => callback(data, paneId);
       ipcRenderer.on('chat:tool-result-complete', listener);
       return () => ipcRenderer.removeListener('chat:tool-result-complete', listener);
     },
@@ -327,5 +331,19 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.invoke('browser:remove-recent-url', url),
     clearRecentUrls: (): Promise<{ success: boolean }> =>
       ipcRenderer.invoke('browser:clear-recent-urls')
+  },
+  window: {
+    getId: (): Promise<{ windowId: string }> => ipcRenderer.invoke('window:get-id')
+  },
+  splits: {
+    load: (windowId: string): Promise<{ success: boolean; tree: unknown | null; error?: string }> =>
+      ipcRenderer.invoke('splits:load', windowId),
+    save: (
+      windowId: string,
+      tree: unknown
+    ): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('splits:save', windowId, tree),
+    delete: (windowId: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('splits:delete', windowId)
   }
 });

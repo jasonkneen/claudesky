@@ -3,11 +3,13 @@ import { Toaster } from 'sonner';
 
 import LoadingStatus, { type LoadingStep } from '@/components/LoadingStatus';
 import ProjectPicker from '@/components/ProjectPicker';
+import SplitLayout from '@/components/splits/SplitLayout';
 import TitleBar from '@/components/TitleBar';
 import UpdateCheckFeedback from '@/components/UpdateCheckFeedback';
 import UpdateNotification from '@/components/UpdateNotification';
 import UpdateReadyBanner from '@/components/UpdateReadyBanner';
 import WorkerIndicator from '@/components/WorkerIndicator';
+import { SplitProvider } from '@/contexts/SplitContext';
 import Browser from '@/pages/Browser';
 import Chat from '@/pages/Chat';
 import Kanban from '@/pages/Kanban';
@@ -130,44 +132,8 @@ export default function App() {
   const openSettings = () => setCurrentView('settings');
 
   // Route based on tab type
+  // Split-capable tabs use SplitProvider + SplitLayout
   switch (tabType) {
-    case 'todos':
-      return (
-        <AppWrapper>
-          <Todos onOpenSettings={openSettings} />
-        </AppWrapper>
-      );
-
-    case 'kanban':
-      return (
-        <AppWrapper>
-          <Kanban onOpenSettings={openSettings} />
-        </AppWrapper>
-      );
-
-    case 'notes':
-      return (
-        <AppWrapper>
-          <Notes onOpenSettings={openSettings} />
-        </AppWrapper>
-      );
-
-    case 'picker':
-      // New tab from "+" button shows browser with URL input
-      return (
-        <AppWrapper>
-          <Browser onOpenSettings={openSettings} />
-        </AppWrapper>
-      );
-
-    case 'browser':
-      // Browser tab
-      return (
-        <AppWrapper>
-          <Browser onOpenSettings={openSettings} />
-        </AppWrapper>
-      );
-
     case 'project': {
       // Get project name from path
       const projectName = projectPath?.split('/').pop() || 'Project';
@@ -181,10 +147,60 @@ export default function App() {
                 <LoadingStatus steps={loadingSteps} title={`Opening ${projectName}...`} />
               </div>
             </div>
-          : <Chat onOpenSettings={openSettings} isVisible={currentView === 'home'} />}
+          : <SplitProvider
+              initialContent={{ type: 'project', projectPath: projectPath || undefined }}
+            >
+              <SplitLayout />
+            </SplitProvider>}
         </AppWrapper>
       );
     }
+
+    case 'todos':
+      return (
+        <AppWrapper>
+          <SplitProvider initialContent={{ type: 'todos' }}>
+            <SplitLayout />
+          </SplitProvider>
+        </AppWrapper>
+      );
+
+    case 'kanban':
+      return (
+        <AppWrapper>
+          <SplitProvider initialContent={{ type: 'kanban' }}>
+            <SplitLayout />
+          </SplitProvider>
+        </AppWrapper>
+      );
+
+    case 'notes':
+      return (
+        <AppWrapper>
+          <SplitProvider initialContent={{ type: 'notes' }}>
+            <SplitLayout />
+          </SplitProvider>
+        </AppWrapper>
+      );
+
+    case 'browser':
+      return (
+        <AppWrapper>
+          <SplitProvider initialContent={{ type: 'browser' }}>
+            <SplitLayout />
+          </SplitProvider>
+        </AppWrapper>
+      );
+
+    case 'picker':
+      // New tab from "+" button shows browser with URL input
+      return (
+        <AppWrapper>
+          <SplitProvider initialContent={{ type: 'browser' }}>
+            <SplitLayout />
+          </SplitProvider>
+        </AppWrapper>
+      );
 
     case 'home':
     default:

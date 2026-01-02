@@ -429,3 +429,30 @@ code {
   border-left: none !important;
   padding-left: 0 !important;
 }
+
+/* Split Pane Styles */
+
+/* Pane container needs relative positioning for absolute children */
+.pane-content {
+  position: relative !important;
+}
+
+/* Force root container to fill pane */
+.pane-content > div {
+  height: 100% !important;
+}
+
+/* Hide TitleBar fixed header */
+.pane-content div[class*="fixed"][class*="top-0"]:has(> button) {
+  display: none !important;
+}
+
+/* Remove TitleBar padding compensation */
+.pane-content > div > div[class*="pt-[48px]"] {
+  padding-top: 0 !important;
+}
+
+/* CRITICAL: ChatInput uses fixed positioning - change to absolute within panes */
+.pane-content div[class*="fixed"][class*="bottom-0"] {
+  position: absolute !important;
+}

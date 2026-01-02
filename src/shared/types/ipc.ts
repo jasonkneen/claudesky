@@ -24,6 +24,7 @@ export interface SendMessagePayload {
   text: string;
   attachments?: SerializedAttachmentPayload[];
   cwd?: string;
+  paneId?: string;
 }
 
 export interface GetChatModelPreferenceResponse {

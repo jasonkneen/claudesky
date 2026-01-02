@@ -85,6 +85,7 @@ let isInterruptingResponse = false;
 const streamIndexToToolId: Map<number, string> = new Map();
 let pendingResumeSessionId: string | null = null;
 let activeChatWindow: BrowserWindow | null = null;
+let activePaneId: string | null = null;
 // Per-window working directory tracking
 const windowCwdMap: Map<number, string> = new Map();
 
@@ -171,6 +172,11 @@ export function setActiveChatWindow(window: BrowserWindow | null): void {
   activeChatWindow = window && !window.isDestroyed() ? window : null;
 }
 
+export function setActivePaneId(paneId: string | null): void {
+  activePaneId = paneId;
+  console.log(`[Session] Active pane set to: ${paneId || 'null'}`);
+}
+
 export function setWindowCwd(windowId: number, cwd: string): void {
   windowCwdMap.set(windowId, cwd);
 }
@@ -193,7 +199,7 @@ export async function interruptCurrentResponse(mainWindow: BrowserWindow | null)
     await querySession.interrupt();
     const targetWindow = resolveTargetWindow(mainWindow);
     if (targetWindow) {
-      targetWindow.webContents.send('chat:message-stopped');
+      targetWindow.webContents.send('chat:message-stopped', activePaneId);
     }
     return true;
   } catch (error) {
@@ -419,7 +425,7 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
           // Only send debug messages if debug mode is enabled
           const targetWindow = resolveTargetWindow(mainWindow);
           if (getDebugMode() && targetWindow) {
-            targetWindow.webContents.send('chat:debug-message', message);
+            targetWindow.webContents.send('chat:debug-message', message, activePaneId);
           }
         },
         systemPrompt: {
@@ -452,7 +458,7 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
         if (streamEvent.type === 'content_block_delta') {
           if (streamEvent.delta.type === 'text_delta') {
             // Regular text delta
-            targetWindow.webContents.send('chat:message-chunk', streamEvent.delta.text);
+            targetWindow.webContents.send('chat:message-chunk', streamEvent.delta.text, activePaneId);
             logEvent(currentSessionId, 'assistant_text_delta', {
               text: streamEvent.delta.text,
               index: streamEvent.index
@@ -463,7 +469,7 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
             targetWindow.webContents.send('chat:thinking-chunk', {
               index: streamEvent.index,
               delta: streamEvent.delta.thinking
-            });
+            }, activePaneId);
             logEvent(currentSessionId, 'thinking_delta', {
               thinking: streamEvent.delta.thinking,
               index: streamEvent.index
@@ -476,7 +482,7 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
               index: streamEvent.index,
               toolId: toolId || '', // Send tool ID if available
               delta: streamEvent.delta.partial_json
-            });
+            }, activePaneId);
             logEvent(currentSessionId, 'tool_input_delta', {
               toolId: toolId || '',
               index: streamEvent.index,
@@ -489,7 +495,7 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
             console.log(`🧠 Thinking block started (index: ${streamEvent.index})`);
             targetWindow.webContents.send('chat:thinking-start', {
               index: streamEvent.index
-            });
+            }, activePaneId);
             logEvent(currentSessionId, 'thinking_start', {
               index: streamEvent.index
             });
@@ -502,7 +508,7 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
               name: streamEvent.content_block.name,
               input: streamEvent.content_block.input || {},
               streamIndex: streamEvent.index
-            });
+            }, activePaneId);
             logEvent(currentSessionId, 'tool_use_start', {
               id: streamEvent.content_block.id,
               name: streamEvent.content_block.name,
@@ -537,7 +543,7 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
                 toolUseId: toolResultBlock.tool_use_id,
                 content: contentStr,
                 isError: toolResultBlock.is_error || false
-              });
+              }, activePaneId);
               logEvent(currentSessionId, 'tool_result_start', {
                 toolUseId: toolResultBlock.tool_use_id,
                 content: contentStr,
@@ -552,7 +558,7 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
           targetWindow.webContents.send('chat:content-block-stop', {
             index: streamEvent.index,
             toolId: toolId || undefined
-          });
+          }, activePaneId);
           logEvent(currentSessionId, 'content_block_stop', {
             index: streamEvent.index,
             toolId: toolId || undefined
@@ -626,7 +632,7 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
                 toolUseId: toolResultBlock.tool_use_id,
                 content: contentStr,
                 isError: toolResultBlock.is_error || false
-              });
+              }, activePaneId);
               logEvent(currentSessionId, 'tool_result_complete', {
                 toolUseId: toolResultBlock.tool_use_id,
                 content: contentStr,
@@ -638,7 +644,7 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
         // Don't signal completion here - agent may still be running tools
       } else if (sdkMessage.type === 'result') {
         // Final result message - this is when the agent is truly done
-        targetWindow.webContents.send('chat:message-complete');
+        targetWindow.webContents.send('chat:message-complete', activePaneId);
         logEvent(currentSessionId, 'message_complete', {
           result: sdkMessage
         });
@@ -684,7 +690,7 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
               targetWindow.webContents.send('chat:session-updated', {
                 sessionId: sessionIdFromSdk,
                 resumed: isResumedSession
-              });
+              }, activePaneId);
             }
             logEvent(currentSessionId, 'session_initialized', {
               sessionId: sessionIdFromSdk,
@@ -702,7 +708,7 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
     const targetWindow = resolveTargetWindow(mainWindow);
     if (targetWindow) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      targetWindow.webContents.send('chat:message-error', errorMessage);
+      targetWindow.webContents.send('chat:message-error', errorMessage, activePaneId);
     }
     logEvent(currentSessionId, 'session_error', {
       error: error instanceof Error ? error.message : String(error),

@@ -5,12 +5,13 @@ import type { ToolUse } from '@/electron';
 import type { Message, ToolInput } from '@/types/chat';
 import { parsePartialJson } from '@/utils/parsePartialJson';
 
-export function useClaudeChat(): {
+export function useClaudeChat(paneId?: string): {
   messages: Message[];
   setMessages: Dispatch<SetStateAction<Message[]>>;
   isLoading: boolean;
   setIsLoading: Dispatch<SetStateAction<boolean>>;
   isThinking: boolean;
+  paneId: string;
 } {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -18,9 +19,17 @@ export function useClaudeChat(): {
   const isStreamingRef = useRef(false);
   const debugMessagesRef = useRef<string[]>([]);
 
+  // Generate stable paneId if not provided (using useMemo to avoid ref during render)
+  const stablePaneId = paneId || `default-chat`;
+
   useEffect(() => {
+    console.log(`[useClaudeChat] Pane ${stablePaneId} initialized`);
+
     // Listen for streaming message chunks
-    const unsubscribeMessageChunk = window.electron.chat.onMessageChunk((chunk: string) => {
+    const unsubscribeMessageChunk = window.electron.chat.onMessageChunk((chunk: string, eventPaneId?: string) => {
+      // Filter: only process if event is for our pane (or no paneId = broadcast)
+      if (eventPaneId && eventPaneId !== stablePaneId) return;
+
       setMessages((prev) => {
         const lastMessage = prev[prev.length - 1];
         // Only append if last message is from assistant AND we're actively streaming
@@ -77,7 +86,8 @@ export function useClaudeChat(): {
 
     // Listen for thinking block start
     const unsubscribeThinkingStart = window.electron.chat.onThinkingStart(
-      (data: { index: number }) => {
+      (data: { index: number }, eventPaneId?: string) => {
+        if (eventPaneId && eventPaneId !== stablePaneId) return;
         setIsThinking(true);
         setMessages((prev) => {
           const lastMessage = prev[prev.length - 1];
@@ -119,7 +129,8 @@ export function useClaudeChat(): {
 
     // Listen for thinking chunk deltas
     const unsubscribeThinkingChunk = window.electron.chat.onThinkingChunk(
-      (data: { index: number; delta: string }) => {
+      (data: { index: number; delta: string }, eventPaneId?: string) => {
+        if (eventPaneId && eventPaneId !== stablePaneId) return;
         setMessages((prev) => {
           const lastMessage = prev[prev.length - 1];
           if (
@@ -163,7 +174,8 @@ export function useClaudeChat(): {
     );
 
     // Listen for tool use start
-    const unsubscribeToolUseStart = window.electron.chat.onToolUseStart((tool: ToolUse) => {
+    const unsubscribeToolUseStart = window.electron.chat.onToolUseStart((tool: ToolUse, eventPaneId?: string) => {
+      if (eventPaneId && eventPaneId !== stablePaneId) return;
       setMessages((prev) => {
         const lastMessage = prev[prev.length - 1];
         const toolBlock = {
@@ -205,7 +217,8 @@ export function useClaudeChat(): {
 
     // Listen for tool input deltas - accumulate the raw string and attempt incremental parsing
     const unsubscribeToolInputDelta = window.electron.chat.onToolInputDelta(
-      (data: { index: number; toolId: string; delta: string }) => {
+      (data: { index: number; toolId: string; delta: string }, eventPaneId?: string) => {
+        if (eventPaneId && eventPaneId !== stablePaneId) return;
         setMessages((prev) => {
           const lastMessage = prev[prev.length - 1];
           if (
@@ -256,7 +269,8 @@ export function useClaudeChat(): {
 
     // Listen for content block stop - parse the accumulated inputJson or mark thinking complete
     const unsubscribeContentBlockStop = window.electron.chat.onContentBlockStop(
-      (data: { index: number; toolId?: string }) => {
+      (data: { index: number; toolId?: string }, eventPaneId?: string) => {
+        if (eventPaneId && eventPaneId !== stablePaneId) return;
         setMessages((prev) => {
           const lastMessage = prev[prev.length - 1];
           if (
@@ -350,7 +364,8 @@ export function useClaudeChat(): {
 
     // Listen for tool result start
     const unsubscribeToolResultStart = window.electron.chat.onToolResultStart(
-      (data: { toolUseId: string; content: string; isError: boolean }) => {
+      (data: { toolUseId: string; content: string; isError: boolean }, eventPaneId?: string) => {
+        if (eventPaneId && eventPaneId !== stablePaneId) return;
         setMessages((prev) => {
           const lastMessage = prev[prev.length - 1];
           if (
@@ -435,7 +450,8 @@ export function useClaudeChat(): {
 
     // Listen for tool result complete
     const unsubscribeToolResultComplete = window.electron.chat.onToolResultComplete(
-      (data: { toolUseId: string; content: string; isError?: boolean }) => {
+      (data: { toolUseId: string; content: string; isError?: boolean }, eventPaneId?: string) => {
+        if (eventPaneId && eventPaneId !== stablePaneId) return;
         setMessages((prev) => {
           const lastMessage = prev[prev.length - 1];
           if (
@@ -477,7 +493,8 @@ export function useClaudeChat(): {
     );
 
     // Listen for message completion
-    const unsubscribeMessageComplete = window.electron.chat.onMessageComplete(() => {
+    const unsubscribeMessageComplete = window.electron.chat.onMessageComplete((eventPaneId?: string) => {
+      if (eventPaneId && eventPaneId !== stablePaneId) return;
       isStreamingRef.current = false;
       setIsLoading(false);
       setIsThinking(false);
@@ -533,7 +550,8 @@ export function useClaudeChat(): {
       }
     });
 
-    const unsubscribeMessageStopped = window.electron.chat.onMessageStopped(() => {
+    const unsubscribeMessageStopped = window.electron.chat.onMessageStopped((eventPaneId?: string) => {
+      if (eventPaneId && eventPaneId !== stablePaneId) return;
       isStreamingRef.current = false;
       setIsLoading(false);
       setIsThinking(false);
@@ -604,7 +622,8 @@ export function useClaudeChat(): {
     });
 
     // Listen for errors
-    const unsubscribeMessageError = window.electron.chat.onMessageError((error: string) => {
+    const unsubscribeMessageError = window.electron.chat.onMessageError((error: string, eventPaneId?: string) => {
+      if (eventPaneId && eventPaneId !== stablePaneId) return;
       isStreamingRef.current = false;
       setIsThinking(false);
 
@@ -661,7 +680,8 @@ export function useClaudeChat(): {
 
     // Listen for debug messages (stderr from Claude Code process)
     // Accumulate debug messages during streaming - they'll be appended when response completes
-    const unsubscribeDebugMessage = window.electron.chat.onDebugMessage((message: string) => {
+    const unsubscribeDebugMessage = window.electron.chat.onDebugMessage((message: string, eventPaneId?: string) => {
+      if (eventPaneId && eventPaneId !== stablePaneId) return;
       // Only accumulate if we're actively streaming
       if (isStreamingRef.current) {
         debugMessagesRef.current.push(message);
@@ -691,6 +711,7 @@ export function useClaudeChat(): {
     setMessages,
     isLoading,
     setIsLoading,
-    isThinking
+    isThinking,
+    paneId: stablePaneId
   };
 }

@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import ChatHistoryDrawer from '@/components/ChatHistoryDrawer';
 import ChatInput from '@/components/ChatInput';
 import MessageList from '@/components/MessageList';
-import MessageQueueDrawer from '@/components/MessageQueueDrawer';
 import TitleBar from '@/components/TitleBar';
 import { ThinkingModeProvider } from '@/contexts/ThinkingModeContext';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
@@ -118,9 +117,10 @@ function serializeMessagesForStorage(messages: Message[]): PersistedMessage[] {
 interface ChatProps {
   onOpenSettings?: () => void;
   isVisible?: boolean;
+  paneId?: string;
 }
 
-export default function Chat({ onOpenSettings, isVisible = true }: ChatProps) {
+export default function Chat({ onOpenSettings, isVisible = true, paneId }: ChatProps) {
   const [inputValue, setInputValue] = useState('');
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
@@ -135,7 +135,7 @@ export default function Chat({ onOpenSettings, isVisible = true }: ChatProps) {
   const [modelPreference, setModelPreference] = useState<ChatModelPreference>('fast');
   const [isModelPreferenceUpdating, setIsModelPreferenceUpdating] = useState(false);
   const [queuedMessages, setQueuedMessages] = useState<QueuedMessage[]>([]);
-  const { messages, setMessages, isLoading, setIsLoading, isThinking } = useClaudeChat();
+  const { messages, setMessages, isLoading, setIsLoading, isThinking, paneId: chatPaneId } = useClaudeChat(paneId);
   const messagesContainerRef = useAutoScroll(isLoading, messages);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoadRef = useRef(true);
@@ -507,7 +507,8 @@ export default function Chat({ onOpenSettings, isVisible = true }: ChatProps) {
         const response = await window.electron.chat.sendMessage({
           text: trimmedMessage,
           attachments: serializedAttachments.length > 0 ? serializedAttachments : undefined,
-          cwd: projectCwd ?? undefined
+          cwd: projectCwd ?? undefined,
+          paneId: chatPaneId
         });
         console.log('[Chat.tsx] sendMessage response:', response);
       } catch (error) {
@@ -585,7 +586,8 @@ export default function Chat({ onOpenSettings, isVisible = true }: ChatProps) {
       const response = await window.electron.chat.sendMessage({
         text: messageContent,
         attachments: serializedAttachments.length > 0 ? serializedAttachments : undefined,
-        cwd: projectCwd ?? undefined
+        cwd: projectCwd ?? undefined,
+        paneId: chatPaneId
       });
 
       if (!response.success && response.error) {

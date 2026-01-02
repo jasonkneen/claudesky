@@ -201,19 +201,19 @@ export interface ElectronAPI {
     getThinkingMode: () => Promise<GetThinkingModeResponse>;
     setThinkingMode: (mode: ThinkingMode) => Promise<SetThinkingModeResponse>;
     enhancePrompt: (prompt: string) => Promise<EnhancePromptResponse>;
-    onMessageChunk: (callback: (chunk: string) => void) => () => void;
-    onThinkingStart: (callback: (data: ThinkingStart) => void) => () => void;
-    onThinkingChunk: (callback: (data: ThinkingChunk) => void) => () => void;
-    onMessageComplete: (callback: () => void) => () => void;
-    onMessageStopped: (callback: () => void) => () => void;
-    onMessageError: (callback: (error: string) => void) => () => void;
-    onDebugMessage: (callback: (message: string) => void) => () => void;
-    onToolUseStart: (callback: (tool: ToolUse) => void) => () => void;
-    onToolInputDelta: (callback: (data: ToolInputDelta) => void) => () => void;
-    onContentBlockStop: (callback: (data: ContentBlockStop) => void) => () => void;
-    onToolResultStart: (callback: (data: ToolResultStart) => void) => () => void;
+    onMessageChunk: (callback: (chunk: string, paneId?: string) => void) => () => void;
+    onThinkingStart: (callback: (data: ThinkingStart, paneId?: string) => void) => () => void;
+    onThinkingChunk: (callback: (data: ThinkingChunk, paneId?: string) => void) => () => void;
+    onMessageComplete: (callback: (paneId?: string) => void) => () => void;
+    onMessageStopped: (callback: (paneId?: string) => void) => () => void;
+    onMessageError: (callback: (error: string, paneId?: string) => void) => () => void;
+    onDebugMessage: (callback: (message: string, paneId?: string) => void) => () => void;
+    onToolUseStart: (callback: (tool: ToolUse, paneId?: string) => void) => () => void;
+    onToolInputDelta: (callback: (data: ToolInputDelta, paneId?: string) => void) => () => void;
+    onContentBlockStop: (callback: (data: ContentBlockStop, paneId?: string) => void) => () => void;
+    onToolResultStart: (callback: (data: ToolResultStart, paneId?: string) => void) => () => void;
     onToolResultDelta: (callback: (data: ToolResultDelta) => void) => () => void;
-    onToolResultComplete: (callback: (data: ToolResultComplete) => void) => () => void;
+    onToolResultComplete: (callback: (data: ToolResultComplete, paneId?: string) => void) => () => void;
     onSessionUpdated: (
       callback: (data: { sessionId: string; resumed: boolean }) => void
     ) => () => void;
@@ -328,6 +328,17 @@ export interface ElectronAPI {
     addRecentUrl: (url: string, title?: string) => Promise<{ success: boolean }>;
     removeRecentUrl: (url: string) => Promise<{ success: boolean }>;
     clearRecentUrls: () => Promise<{ success: boolean }>;
+  };
+  window: {
+    getId: () => Promise<{ windowId: string }>;
+  };
+  splits: {
+    load: (windowId: string) => Promise<{ success: boolean; tree: unknown | null; error?: string }>;
+    save: (
+      windowId: string,
+      tree: unknown
+    ) => Promise<{ success: boolean; error?: string }>;
+    delete: (windowId: string) => Promise<{ success: boolean; error?: string }>;
   };
 }
 

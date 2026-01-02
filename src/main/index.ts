@@ -18,6 +18,7 @@ import { registerConversationHandlers } from './handlers/conversation-handlers';
 import { registerFileHandlers } from './handlers/file-handlers';
 import { registerOAuthHandlers } from './handlers/oauth-handlers';
 import { registerShellHandlers } from './handlers/shell-handlers';
+import { registerSplitHandlers } from './handlers/split-handlers';
 import { registerUpdateHandlers } from './handlers/update-handlers';
 import { registerWorkerHandlers } from './handlers/worker-handlers';
 import {
@@ -241,6 +242,7 @@ app.whenReady().then(async () => {
   registerConversationHandlers();
   registerFileHandlers();
   registerShellHandlers();
+  registerSplitHandlers();
   registerUpdateHandlers();
   registerWorkerHandlers(() => mainWindow);
 

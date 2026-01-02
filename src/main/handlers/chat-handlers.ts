@@ -20,6 +20,7 @@ import {
   isSessionActive,
   resetSession,
   setActiveChatWindow,
+  setActivePaneId,
   setChatModelPreference,
   setThinkingMode,
   setWindowCwd,
@@ -36,6 +37,9 @@ export function registerChatHandlers(getMainWindow: () => BrowserWindow | null):
     console.log('[chat-handlers] chat:send-message received, payload:', JSON.stringify(payload));
     const sourceWindow = BrowserWindow.fromWebContents(event.sender);
     setActiveChatWindow(sourceWindow ?? getMainWindow());
+
+    // Store active pane ID for this session
+    setActivePaneId(payload.paneId || null);
 
     // Store per-window cwd if provided
     if (payload.cwd && sourceWindow) {
