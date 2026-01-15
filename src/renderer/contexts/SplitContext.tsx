@@ -24,6 +24,8 @@ interface SplitContextType {
   activePane: string | undefined;
   /** Window ID for this renderer */
   windowId: string;
+  /** Current project name */
+  projectName?: string;
 
   // Mutations
   /** Split a pane into two */
@@ -53,9 +55,10 @@ export function useSplitContext(): SplitContextType {
 interface SplitProviderProps {
   children: ReactNode;
   initialContent?: PaneContent;
+  projectName?: string;
 }
 
-export function SplitProvider({ children, initialContent }: SplitProviderProps) {
+export function SplitProvider({ children, initialContent, projectName }: SplitProviderProps) {
   const [windowId, setWindowId] = useState<string>('');
   const [tree, setTree] = useState<SplitTree>(() => {
     const defaultTree = createDefaultTree(initialContent);
@@ -81,6 +84,7 @@ export function SplitProvider({ children, initialContent }: SplitProviderProps) 
     tree,
     activePane: tree.activePane,
     windowId,
+    projectName,
 
     splitPane: (paneId: string, direction: SplitDirection, newContent: PaneContent) => {
       setTree((prev) => splitPane(prev, paneId, direction, newContent));

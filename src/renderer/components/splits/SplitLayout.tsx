@@ -5,9 +5,10 @@
  * Recursively renders nodes as either panes or split containers.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { SplitNode } from '../../../shared/types/splits';
+import TitleBar from '../TitleBar';
 import { useSplitContext } from '../../contexts/SplitContext';
 import { findFirstLeafId } from '../../../shared/utils/split-utils';
 
@@ -15,7 +16,8 @@ import PaneRenderer from './PaneRenderer';
 import SplitContainer from './SplitContainer';
 
 export default function SplitLayout() {
-  const { tree, splitPane, closePane, activePane } = useSplitContext();
+  const { tree, splitPane, closePane, activePane, projectName } = useSplitContext();
+  const [openSettings, setOpenSettings] = useState(false);
 
   // Keyboard shortcuts:
   // Cmd+D - Split vertically (like iTerm2)
@@ -56,8 +58,11 @@ export default function SplitLayout() {
   }, [tree, splitPane, closePane, activePane]);
 
   return (
-    <div className="h-screen w-screen overflow-hidden">
-      <SplitNode node={tree.root} />
+    <div className="h-screen w-screen overflow-hidden flex flex-col">
+      <TitleBar onOpenSettings={() => setOpenSettings(!openSettings)} projectName={projectName} />
+      <div className="flex-1 overflow-hidden pt-[48px]">
+        <SplitNode node={tree.root} />
+      </div>
     </div>
   );
 }

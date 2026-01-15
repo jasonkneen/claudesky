@@ -20,6 +20,10 @@ export default function ProjectPicker() {
     window.electron.project
       .listRecent()
       .then((response) => {
+        console.log('[ProjectPicker] Loaded recent projects:');
+        response.projects.forEach((p, i) => {
+          console.log(`  [${i}] ${p.name} - ${p.path}`);
+        });
         setRecentProjects(response.projects);
       })
       .catch((error) => {

@@ -4,9 +4,10 @@ interface TitleBarProps {
   onOpenHistory?: () => void;
   onNewChat?: () => void;
   onOpenSettings?: () => void;
+  projectName?: string;
 }
 
-export default function TitleBar({ onOpenHistory, onNewChat, onOpenSettings }: TitleBarProps) {
+export default function TitleBar({ onOpenHistory, onNewChat, onOpenSettings, projectName }: TitleBarProps) {
   // Detect Windows platform
   const isWindows = navigator.platform.toLowerCase().includes('win');
 
@@ -46,7 +47,13 @@ export default function TitleBar({ onOpenHistory, onNewChat, onOpenSettings }: T
           </div>
         )}
 
-        <div className="flex-1" />
+        <div className="flex-1 flex items-center justify-center">
+          {projectName && (
+            <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 truncate max-w-xs">
+              {projectName}
+            </span>
+          )}
+        </div>
 
         {onOpenSettings && (
           <button

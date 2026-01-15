@@ -609,6 +609,11 @@ export function addRecentProject(projectPath: string, projectName: string): void
   const config = loadConfig();
   const recentProjects = config.recentProjects ?? [];
 
+  console.log(`[Config] addRecentProject - Before: ${recentProjects.length} projects`);
+  recentProjects.forEach((p, i) => {
+    console.log(`  [${i}] ${p.name} - ${p.path}`);
+  });
+
   // Remove any existing entry for this path
   const filtered = recentProjects.filter((p) => p.path !== projectPath);
 
@@ -624,6 +629,12 @@ export function addRecentProject(projectPath: string, projectName: string): void
 
   // Limit to 10 most recent projects
   config.recentProjects = updated.slice(0, 10);
+
+  console.log(`[Config] addRecentProject - After: ${config.recentProjects.length} projects`);
+  config.recentProjects.forEach((p, i) => {
+    console.log(`  [${i}] ${p.name} - ${p.path}`);
+  });
+
   saveConfig(config);
 }
 

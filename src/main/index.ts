@@ -25,7 +25,9 @@ import {
   addRecentProject,
   buildEnhancedPath,
   ensureWorkspaceDir,
-  getRecentProjects
+  getRecentProjects,
+  loadConfig,
+  saveConfig
 } from './lib/config';
 import { initializeUpdater, startPeriodicUpdateCheck } from './lib/updater';
 import { loadWindowBounds, saveWindowBounds } from './lib/window-state';
@@ -258,6 +260,11 @@ app.whenReady().then(async () => {
 
     // Add to recent projects
     addRecentProject(projectPath, projectName);
+
+    // Save the workspace directory so it persists across sessions
+    const config = loadConfig();
+    config.workspaceDir = projectPath;
+    saveConfig(config);
 
     projectWindow.once('ready-to-show', () => {
       console.log(`[project:open] Project window ready-to-show`);

@@ -142,13 +142,14 @@ export default function App() {
         <AppWrapper>
           {!isInitialized ?
             <div className="flex h-screen flex-col bg-white dark:bg-neutral-900">
-              <TitleBar onOpenSettings={openSettings} />
+              <TitleBar onOpenSettings={openSettings} projectName={projectName} />
               <div className="flex-1 overflow-auto pt-[48px]">
                 <LoadingStatus steps={loadingSteps} title={`Opening ${projectName}...`} />
               </div>
             </div>
           : <SplitProvider
               initialContent={{ type: 'project', projectPath: projectPath || undefined }}
+              projectName={projectName}
             >
               <SplitLayout />
             </SplitProvider>}
