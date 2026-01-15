@@ -118,9 +118,13 @@ interface ChatProps {
   onOpenSettings?: () => void;
   isVisible?: boolean;
   paneId?: string;
+  /** Project path for this chat - passed from split pane content */
+  projectPath?: string;
 }
 
-export default function Chat({ onOpenSettings, isVisible = true, paneId }: ChatProps) {
+export default function Chat({ onOpenSettings, isVisible = true, paneId, projectPath }: ChatProps) {
+  console.log('[Chat] projectPath prop:', projectPath);
+  console.log('[Chat] URL fallback:', window.electron.project.getFromUrl());
   const [inputValue, setInputValue] = useState('');
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
@@ -129,8 +133,12 @@ export default function Chat({ onOpenSettings, isVisible = true, paneId }: ChatP
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [workspaceDir, setWorkspaceDir] = useState<string | null>(null);
-  // Per-tab project path (cwd) - set once when tab opens
-  const [projectCwd] = useState<string | null>(() => window.electron.project.getFromUrl());
+  // Per-pane project path (cwd) - prefer explicit prop, fallback to URL for backwards compatibility
+  const [projectCwd] = useState<string | null>(() => {
+    const resolved = projectPath ?? window.electron.project.getFromUrl();
+    console.log('[Chat] projectCwd resolved to:', resolved);
+    return resolved;
+  });
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [modelPreference, setModelPreference] = useState<ChatModelPreference>('fast');
   const [isModelPreferenceUpdating, setIsModelPreferenceUpdating] = useState(false);

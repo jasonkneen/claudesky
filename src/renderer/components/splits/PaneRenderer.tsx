@@ -70,7 +70,8 @@ export default function PaneRenderer({ pane }: PaneRendererProps) {
 
           {/* Chat with paneId for session isolation - relative container for absolute ChatInput */}
           <div className={`pane-content relative h-full w-full overflow-hidden ${showSettings ? 'hidden' : 'block'}`}>
-            <Chat key={pane.id} paneId={pane.id} onOpenSettings={openSettings} />
+            {(() => { console.log('[PaneRenderer] pane.content.projectPath:', pane.content.projectPath); return null; })()}
+            <Chat key={pane.id} paneId={pane.id} projectPath={pane.content.projectPath} onOpenSettings={openSettings} />
           </div>
         </>
       );

@@ -163,6 +163,9 @@ type TabType = 'project' | 'todos' | 'kanban' | 'notes' | 'picker' | 'browser';
 
 // Create a new window/tab with specified type
 function createTabWindow(type: TabType, projectPath?: string): BrowserWindow {
+  console.log(`[createTabWindow] ===== CREATING TAB WINDOW =====`);
+  console.log(`[createTabWindow] type: "${type}"`);
+  console.log(`[createTabWindow] projectPath: "${projectPath}"`);
   const isDev = process.env.ELECTRON_RENDERER_URL !== undefined;
   const preloadPath = join(__dirname, '../preload/index.cjs');
   const iconPath = join(__dirname, '../../static/icon.png');
@@ -250,10 +253,12 @@ app.whenReady().then(async () => {
 
   // IPC handler to open a project in a new native tab
   ipcMain.handle('project:open', async (event, projectPath: string) => {
+    console.log(`[project:open] ========== OPENING PROJECT ==========`);
+    console.log(`[project:open] Received projectPath: "${projectPath}"`);
     const sourceWindow = BrowserWindow.fromWebContents(event.sender);
     const projectWindow = createProjectWindow(projectPath);
 
-    console.log(`[project:open] Opening project: ${projectPath}`);
+    console.log(`[project:open] Created window, projectPath was: "${projectPath}"`);
 
     // Extract project name from path (last directory component)
     const projectName = projectPath.split(/[\\/]/).filter(Boolean).pop() || projectPath;

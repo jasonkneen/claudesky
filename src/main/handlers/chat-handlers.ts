@@ -15,6 +15,7 @@ import type {
 } from '../../shared/types/ipc';
 import {
   getCurrentModelPreference,
+  getCurrentSessionCwd,
   getCurrentThinkingMode,
   interruptCurrentResponse,
   isSessionActive,
@@ -44,6 +45,13 @@ export function registerChatHandlers(getMainWindow: () => BrowserWindow | null):
     // Store per-window cwd if provided
     if (payload.cwd && sourceWindow) {
       setWindowCwd(sourceWindow.id, payload.cwd);
+
+      // Check if cwd changed from current session - if so, reset to start fresh
+      const currentCwd = getCurrentSessionCwd();
+      if (currentCwd && currentCwd !== payload.cwd && isSessionActive()) {
+        console.log(`[chat-handlers] CWD changed from "${currentCwd}" to "${payload.cwd}" - resetting session`);
+        await resetSession();
+      }
     }
     // Check for API key or OAuth token
     const apiKey = getApiKey();

@@ -88,6 +88,8 @@ let activeChatWindow: BrowserWindow | null = null;
 let activePaneId: string | null = null;
 // Per-window working directory tracking
 const windowCwdMap: Map<number, string> = new Map();
+// Track the cwd used by the current session - reset session if cwd changes
+let currentSessionCwd: string | null = null;
 
 function getModelIdForPreference(preference: ChatModelPreference = currentModelPreference): string {
   return MODEL_BY_PREFERENCE[preference] ?? FAST_MODEL_ID;
@@ -185,6 +187,10 @@ export function getWindowCwd(windowId: number): string | undefined {
   return windowCwdMap.get(windowId);
 }
 
+export function getCurrentSessionCwd(): string | null {
+  return currentSessionCwd;
+}
+
 export async function interruptCurrentResponse(mainWindow: BrowserWindow | null): Promise<boolean> {
   if (!querySession) {
     return false;
@@ -239,6 +245,7 @@ export async function resetSession(resumeSessionId?: string | null): Promise<voi
   querySession = null;
   isProcessing = false;
   sessionTerminationPromise = null;
+  currentSessionCwd = null;
 }
 
 // Start streaming session
@@ -434,7 +441,13 @@ export async function startStreamingSession(mainWindow: BrowserWindow | null): P
           append: SYSTEM_PROMPT_APPEND
         },
         // Use per-window cwd if set, otherwise fall back to global workspace
-        cwd: (activeChatWindow && getWindowCwd(activeChatWindow.id)) || getWorkspaceDir(),
+        // Store it so we can detect when cwd changes and reset session
+        cwd: (() => {
+          const resolvedCwd = (activeChatWindow && getWindowCwd(activeChatWindow.id)) || getWorkspaceDir();
+          currentSessionCwd = resolvedCwd;
+          console.log(`[Session] Session cwd set to: ${resolvedCwd}`);
+          return resolvedCwd;
+        })(),
         includePartialMessages: true,
         ...(isResumedSession && { resume: resumeSessionId! })
       }

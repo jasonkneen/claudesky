@@ -147,12 +147,17 @@ export default function App() {
                 <LoadingStatus steps={loadingSteps} title={`Opening ${projectName}...`} />
               </div>
             </div>
-          : <SplitProvider
-              initialContent={{ type: 'project', projectPath: projectPath || undefined }}
-              projectName={projectName}
-            >
-              <SplitLayout />
-            </SplitProvider>}
+          : (() => {
+              console.log('[App] SplitProvider initialContent.projectPath:', projectPath || undefined);
+              return (
+                <SplitProvider
+                  initialContent={{ type: 'project', projectPath: projectPath || undefined }}
+                  projectName={projectName}
+                >
+                  <SplitLayout />
+                </SplitProvider>
+              );
+            })()}
         </AppWrapper>
       );
     }

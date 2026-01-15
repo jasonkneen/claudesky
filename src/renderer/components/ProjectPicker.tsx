@@ -35,9 +35,13 @@ export default function ProjectPicker() {
   }, []);
 
   const handleOpenProject = async (projectPath: string) => {
+    console.log('[ProjectPicker] ========== OPENING PROJECT ==========');
+    console.log('[ProjectPicker] handleOpenProject called with:', projectPath);
     setOpeningProject(projectPath);
     try {
+      console.log('[ProjectPicker] Calling window.electron.project.open...');
       await window.electron.project.open(projectPath);
+      console.log('[ProjectPicker] project.open completed');
     } catch (error) {
       console.error('Failed to open project:', error);
     } finally {

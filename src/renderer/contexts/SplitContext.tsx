@@ -59,9 +59,14 @@ interface SplitProviderProps {
 }
 
 export function SplitProvider({ children, initialContent, projectName }: SplitProviderProps) {
+  console.log('[SplitProvider] ========== INITIALIZING ==========');
+  console.log('[SplitProvider] initialContent:', JSON.stringify(initialContent));
+  console.log('[SplitProvider] projectName:', projectName);
   const [windowId, setWindowId] = useState<string>('');
   const [tree, setTree] = useState<SplitTree>(() => {
+    console.log('[SplitProvider] Creating default tree with content:', JSON.stringify(initialContent));
     const defaultTree = createDefaultTree(initialContent);
+    console.log('[SplitProvider] Tree created, root content:', JSON.stringify(defaultTree.root.kind === 'leaf' ? defaultTree.root.content : 'branch'));
     // Auto-focus first pane
     return {
       ...defaultTree,
